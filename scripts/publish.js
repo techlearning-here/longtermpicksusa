@@ -9,6 +9,14 @@ const {toHTML} = require('@portabletext/to-html')
 const BRANCH = 'gh-pages'
 const SITE_TITLE = 'LongTermPicksUSA'
 
+/** Base path for GitHub Project Pages (e.g. /longtermpicksusa). Empty for user/org site (username.github.io). */
+function getBasePath(repo) {
+  const parts = repo.split('/')
+  const reponame = parts[1] || ''
+  if (reponame === '' || reponame.endsWith('.github.io')) return ''
+  return '/' + reponame
+}
+
 function getEnv(name) {
   const v = process.env[name]
   if (!v) throw new Error(`Missing env: ${name}`)
@@ -48,12 +56,13 @@ function getSlug(doc) {
   return (s && (typeof s === 'string' ? s : s.current)) || doc.ticker || doc._id?.replace(/^drafts\./, '') || 'untitled'
 }
 
-function buildArticleHtml(doc, siteTitle) {
+function buildArticleHtml(doc, siteTitle, basePath) {
   const slug = getSlug(doc)
   const title = doc.title || 'Untitled'
   const bodyHtml = portableTextToHtml(doc.body)
   const excerpt = escapeHtml(doc.excerpt || '')
   const published = doc.publishedAt ? new Date(doc.publishedAt).toISOString() : ''
+  const base = basePath || ''
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -64,6 +73,7 @@ function buildArticleHtml(doc, siteTitle) {
   ${published ? `<meta name="date" content="${published}">` : ''}
 </head>
 <body>
+  <nav><a href="${base}/">Home</a> | <a href="${base}/articles/">Articles</a> | <a href="${base}/recommendations/">Recommendations</a></nav>
   <article>
     <header><h1>${escapeHtml(title)}</h1></header>
     <div class="content">${bodyHtml}</div>
@@ -72,7 +82,7 @@ function buildArticleHtml(doc, siteTitle) {
 </html>`
 }
 
-function buildStockRecommendationHtml(doc, siteTitle) {
+function buildStockRecommendationHtml(doc, siteTitle, basePath) {
   const slug = getSlug(doc)
   const title = doc.companyName || doc.ticker || 'Untitled'
   const ticker = doc.ticker || ''
@@ -81,6 +91,7 @@ function buildStockRecommendationHtml(doc, siteTitle) {
   const targetPrice = doc.targetPrice != null ? doc.targetPrice : ''
   const timeHorizon = escapeHtml(doc.timeHorizon || '')
   const published = doc.publishedAt ? new Date(doc.publishedAt).toISOString() : ''
+  const base = basePath || ''
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -90,6 +101,7 @@ function buildStockRecommendationHtml(doc, siteTitle) {
   ${published ? `<meta name="date" content="${published}">` : ''}
 </head>
 <body>
+  <nav><a href="${base}/">Home</a> | <a href="${base}/articles/">Articles</a> | <a href="${base}/recommendations/">Recommendations</a></nav>
   <article>
     <header><h1>${escapeHtml(title)} (${escapeHtml(ticker)})</h1></header>
     <p><strong>Recommendation:</strong> ${escapeHtml(recommendationType)}</p>
@@ -102,9 +114,9 @@ function buildStockRecommendationHtml(doc, siteTitle) {
 </html>`
 }
 
-function buildListingHtml(manifest, type, siteTitle) {
+function buildListingHtml(manifest, type, siteTitle, basePath) {
   const items = type === 'article' ? (manifest.articles || []) : (manifest.recommendations || [])
-  const base = type === 'article' ? '/articles' : '/recommendations'
+  const base = (basePath || '') + (type === 'article' ? '/articles' : '/recommendations')
   const title = type === 'article' ? 'Articles' : 'Stock Recommendations'
   const list = items
     .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0))
@@ -113,6 +125,7 @@ function buildListingHtml(manifest, type, siteTitle) {
         `    <li><a href="${base}/${escapeHtml(item.slug)}.html">${escapeHtml(item.title)}</a></li>`
     )
     .join('\n')
+  const b = basePath || ''
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -122,7 +135,7 @@ function buildListingHtml(manifest, type, siteTitle) {
 </head>
 <body>
   <h1>${escapeHtml(siteTitle)}</h1>
-  <nav><a href="/">Home</a> | <a href="/articles/">Articles</a> | <a href="/recommendations/">Recommendations</a></nav>
+  <nav><a href="${b}/">Home</a> | <a href="${b}/articles/">Articles</a> | <a href="${b}/recommendations/">Recommendations</a></nav>
   <h2>${title}</h2>
   <ul>
 ${list}
@@ -131,14 +144,15 @@ ${list}
 </html>`
 }
 
-function buildIndexHtml(manifest, siteTitle) {
+function buildIndexHtml(manifest, siteTitle, basePath) {
   const articles = (manifest.articles || []).slice(0, 10)
   const recommendations = (manifest.recommendations || []).slice(0, 10)
+  const b = basePath || ''
   const articleList = articles
-    .map((a) => `    <li><a href="/articles/${escapeHtml(a.slug)}.html">${escapeHtml(a.title)}</a></li>`)
+    .map((a) => `    <li><a href="${b}/articles/${escapeHtml(a.slug)}.html">${escapeHtml(a.title)}</a></li>`)
     .join('\n')
   const recList = recommendations
-    .map((r) => `    <li><a href="/recommendations/${escapeHtml(r.slug)}.html">${escapeHtml(r.title)} (${escapeHtml(r.ticker || '')})</a></li>`)
+    .map((r) => `    <li><a href="${b}/recommendations/${escapeHtml(r.slug)}.html">${escapeHtml(r.title)} (${escapeHtml(r.ticker || '')})</a></li>`)
     .join('\n')
   return `<!DOCTYPE html>
 <html lang="en">
@@ -150,7 +164,7 @@ function buildIndexHtml(manifest, siteTitle) {
 <body>
   <h1>${escapeHtml(siteTitle)}</h1>
   <p>Long-term stock picks and finance articles for US investors.</p>
-  <nav><a href="/articles/">Articles</a> | <a href="/recommendations/">Recommendations</a></nav>
+  <nav><a href="${b}/articles/">Articles</a> | <a href="${b}/recommendations/">Recommendations</a></nav>
   <h2>Latest articles</h2>
   <ul>
 ${articleList || '    <li>No articles yet.</li>'}
@@ -223,6 +237,7 @@ async function main() {
 
   const doc = await fetchSanityDocument(projectId, dataset, documentId)
   const slug = getSlug(doc)
+  const basePath = getBasePath(repo)
 
   let manifest = {articles: [], recommendations: [], updatedAt: new Date().toISOString()}
   const manifestFile = await githubGetFile(repo, 'manifest.json', token)
@@ -245,8 +260,8 @@ async function main() {
     documentType === 'article' ? `articles/${slug}.html` : `recommendations/${slug}.html`
   const detailHtml =
     documentType === 'article'
-      ? buildArticleHtml(doc, SITE_TITLE)
-      : buildStockRecommendationHtml(doc, SITE_TITLE)
+      ? buildArticleHtml(doc, SITE_TITLE, basePath)
+      : buildStockRecommendationHtml(doc, SITE_TITLE, basePath)
 
   await githubPutFile(repo, detailPath, detailHtml, token)
 
@@ -257,7 +272,7 @@ async function main() {
   await githubPutFile(
     repo,
     'articles/index.html',
-    buildListingHtml(manifest, 'article', SITE_TITLE),
+    buildListingHtml(manifest, 'article', SITE_TITLE, basePath),
     token,
     articlesIndex?.sha
   )
@@ -266,13 +281,13 @@ async function main() {
   await githubPutFile(
     repo,
     'recommendations/index.html',
-    buildListingHtml(manifest, 'stockRecommendation', SITE_TITLE),
+    buildListingHtml(manifest, 'stockRecommendation', SITE_TITLE, basePath),
     token,
     recsIndex?.sha
   )
 
   const indexFile = await githubGetFile(repo, 'index.html', token)
-  await githubPutFile(repo, 'index.html', buildIndexHtml(manifest, SITE_TITLE), token, indexFile?.sha)
+  await githubPutFile(repo, 'index.html', buildIndexHtml(manifest, SITE_TITLE, basePath), token, indexFile?.sha)
 
   console.log(`Published ${documentType} ${slug} to gh-pages`)
 }
