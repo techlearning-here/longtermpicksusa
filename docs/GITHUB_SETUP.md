@@ -168,7 +168,25 @@ After this, when you **publish** an article or stock recommendation in [LongTerm
 
 ---
 
-## 7. Summary
+## 7. Troubleshooting: 403 "Resource not accessible by integration"
+
+If the publish workflow fails with **403** on `GitHub PUT ...`:
+
+1. **Use a new run, not Re-run**  
+   **Re-run** uses the workflow from the **original run’s commit**. If that commit still had `GITHUB_TOKEN`, the re-run keeps using it and gets 403.  
+   - **Fix:** Trigger a **new** run: either **publish again from Sanity** (same or another document) or use **Run workflow** (see below). Do not rely on Re-run until the run was created from a commit that already uses `GH_PAT`.
+
+2. **Confirm the `GH_PAT` secret**  
+   Repo → **Settings** → **Secrets and variables** → **Actions**. Ensure **`GH_PAT`** exists and is a Personal Access Token (classic) with **`repo`** scope (or a fine-grained token with **Contents: Read and write** for this repo).
+
+3. **Run workflow manually (latest code)**  
+   The workflow supports **workflow_dispatch**, so you can start a run from the Actions tab with the latest workflow from `main`:  
+   - **Actions** → **Publish to GitHub Pages** → **Run workflow** → choose branch **main** → fill **Document ID** (e.g. `91837bc7-d54e-4313-8eea-3ecf006f7ba8`) and **Document type** (e.g. `stockRecommendation`) → **Run workflow**.  
+   That run uses the workflow file from `main` (including `GH_PAT`), so you can verify the token without publishing from Sanity again.
+
+---
+
+## 8. Summary
 
 | Step | What you did |
 |------|----------------|
@@ -179,4 +197,4 @@ After this, when you **publish** an article or stock recommendation in [LongTerm
 | 5 | Set `SANITY_PROJECT_ID`, `SANITY_DATASET`, and `GH_PAT` in repo secrets. |
 | 6 | Added a Sanity webhook that calls GitHub `repository_dispatch` with `documentId` and `type`. |
 
-**Test:** Publish an article or recommendation in the Studio; check the **Actions** tab for the “Publish to GitHub Pages” workflow run; then open `https://YOUR_USERNAME.github.io/YOUR_REPO/`.
+**Test:** Publish an article or recommendation in the Studio; check the **Actions** tab for the “Publish to GitHub Pages” workflow run; then open `https://YOUR_USERNAME.github.io/YOUR_REPO/`. Or use **Actions** → **Publish to GitHub Pages** → **Run workflow** to run with the latest workflow and test `GH_PAT`.

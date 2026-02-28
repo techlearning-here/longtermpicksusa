@@ -144,35 +144,112 @@ ${list}
 </html>`
 }
 
+function formatRecommendationDate(isoDate) {
+  if (!isoDate) return '—'
+  const d = new Date(isoDate)
+  return d.toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'})
+}
+
 function buildIndexHtml(manifest, siteTitle, basePath) {
-  const articles = (manifest.articles || []).slice(0, 10)
-  const recommendations = (manifest.recommendations || []).slice(0, 10)
+  const recommendations = (manifest.recommendations || [])
+    .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0))
+    .slice(0, 10)
   const b = basePath || ''
-  const articleList = articles
-    .map((a) => `    <li><a href="${b}/articles/${escapeHtml(a.slug)}.html">${escapeHtml(a.title)}</a></li>`)
-    .join('\n')
-  const recList = recommendations
-    .map((r) => `    <li><a href="${b}/recommendations/${escapeHtml(r.slug)}.html">${escapeHtml(r.title)} (${escapeHtml(r.ticker || '')})</a></li>`)
-    .join('\n')
+
+  const rows = recommendations.length
+    ? recommendations
+        .map(
+          (r) => {
+            const recType = (r.recommendationType || '').toLowerCase()
+            const isBuy = recType === 'buy'
+            const badgeClass = isBuy ? 'badge-buy' : recType === 'sell' ? 'badge-sell' : 'badge-neutral'
+            const targetStr =
+              r.targetPrice != null && r.targetPrice !== '' ? `$${Number(r.targetPrice).toLocaleString()}` : '—'
+            const dateStr = formatRecommendationDate(r.publishedAt)
+            const detailUrl = `${b}/recommendations/${escapeHtml(r.slug)}.html`
+            return `    <tr>
+      <td class="col-ticker"><a href="${detailUrl}" class="link-ticker">${escapeHtml(r.ticker || '—')}</a></td>
+      <td class="col-company">${escapeHtml(r.title || '—')}</td>
+      <td class="col-rec"><span class="badge ${badgeClass}">${escapeHtml(r.recommendationType || '—')}</span></td>
+      <td class="col-date">${escapeHtml(dateStr)}</td>
+      <td class="col-target">${escapeHtml(targetStr)}</td>
+      <td class="col-horizon">${escapeHtml(r.timeHorizon || '—')}</td>
+      <td class="col-action"><a href="${detailUrl}" class="link-view">View</a></td>
+    </tr>`
+          }
+        )
+        .join('\n')
+    : `    <tr><td colspan="7" class="empty-state">No recommendations yet.</td></tr>`
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(siteTitle)}</title>
+  <style>
+    :root { --bg: #f8f9fa; --card: #fff; --text: #1a1a1a; --muted: #5c5c5c; --accent: #0d6efd; --buy: #198754; --sell: #dc3545; --border: #dee2e6; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
+    .site-header { background: var(--card); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; }
+    .site-title { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.25rem 0; }
+    .site-tagline { font-size: 0.9rem; color: var(--muted); margin: 0; }
+    nav { margin-top: 0.75rem; }
+    nav a { color: var(--accent); text-decoration: none; margin-right: 1rem; }
+    nav a:hover { text-decoration: underline; }
+    .main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+    .section-title { font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; }
+    .table-wrap { background: var(--card); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.02em; color: var(--muted); background: var(--bg); }
+    tr:last-child td { border-bottom: 0; }
+    .col-ticker { font-weight: 600; }
+    .link-ticker { color: var(--text); text-decoration: none; }
+    .link-ticker:hover { color: var(--accent); text-decoration: underline; }
+    .badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+    .badge-buy { background: #d1e7dd; color: var(--buy); }
+    .badge-sell { background: #f8d7da; color: var(--sell); }
+    .badge-neutral { background: var(--bg); color: var(--muted); }
+    .link-view { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .link-view:hover { text-decoration: underline; }
+    .empty-state { color: var(--muted); font-style: italic; text-align: center; }
+    .footer-links { margin-top: 1.5rem; font-size: 0.9rem; }
+    .footer-links a { color: var(--accent); text-decoration: none; margin-right: 1rem; }
+    @media (max-width: 640px) {
+      th:nth-child(5), th:nth-child(6), .col-target, .col-horizon { display: none; }
+      th, td { padding: 0.5rem; font-size: 0.9rem; }
+    }
+  </style>
 </head>
 <body>
-  <h1>${escapeHtml(siteTitle)}</h1>
-  <p>Long-term stock picks and finance articles for US investors.</p>
-  <nav><a href="${b}/articles/">Articles</a> | <a href="${b}/recommendations/">Recommendations</a></nav>
-  <h2>Latest articles</h2>
-  <ul>
-${articleList || '    <li>No articles yet.</li>'}
-  </ul>
-  <h2>Latest stock recommendations</h2>
-  <ul>
-${recList || '    <li>No recommendations yet.</li>'}
-  </ul>
+  <header class="site-header">
+    <h1 class="site-title">${escapeHtml(siteTitle)}</h1>
+    <p class="site-tagline">Long-term stock picks and insights for US investors.</p>
+    <nav><a href="${b}/">Home</a><a href="${b}/articles/">Articles</a><a href="${b}/recommendations/">All recommendations</a></nav>
+  </header>
+  <main class="main">
+    <h2 class="section-title">Recent stock recommendations</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Company</th>
+            <th>Recommendation</th>
+            <th>Date</th>
+            <th>Target price</th>
+            <th>Time horizon</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+${rows}
+        </tbody>
+      </table>
+    </div>
+    <p class="footer-links"><a href="${b}/recommendations/">View all recommendations</a><a href="${b}/articles/">Articles</a></p>
+  </main>
 </body>
 </html>`
 }
@@ -187,6 +264,9 @@ function manifestEntry(doc, type) {
     slug,
     title: doc.companyName || doc.ticker || 'Untitled',
     ticker: doc.ticker || '',
+    recommendationType: doc.recommendationType || '',
+    targetPrice: doc.targetPrice != null ? doc.targetPrice : null,
+    timeHorizon: doc.timeHorizon || '',
     excerpt: '',
     publishedAt: doc.publishedAt || ''
   }
@@ -264,7 +344,13 @@ async function main() {
       : buildStockRecommendationHtml(doc, SITE_TITLE, basePath)
 
   const existingDetail = await githubGetFile(repo, detailPath, token)
-  await githubPutFile(repo, detailPath, detailHtml, token, existingDetail?.sha)
+  const detailSha = existingDetail?.sha ?? null
+  if (existingDetail && !detailSha) {
+    throw new Error(
+      `GitHub GET ${detailPath} returned content but no sha; cannot update file.`
+    )
+  }
+  await githubPutFile(repo, detailPath, detailHtml, token, detailSha)
 
   const manifestSha = manifestFile ? manifestFile.sha : null
   await githubPutFile(repo, 'manifest.json', JSON.stringify(manifest, null, 2), token, manifestSha)

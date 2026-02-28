@@ -3,6 +3,15 @@ name: Publish to GitHub Pages
 on:
   repository_dispatch:
     types: [sanity-publish]
+  workflow_dispatch:
+    inputs:
+      documentId:
+        description: 'Document ID (from Sanity)'
+        required: true
+      documentType:
+        description: 'article or stockRecommendation'
+        required: true
+        default: 'stockRecommendation'
 
 permissions:
   contents: write
@@ -31,6 +40,6 @@ jobs:
           SANITY_DATASET: ${{ secrets.SANITY_DATASET }}
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          DOCUMENT_ID: ${{ github.event.client_payload.documentId }}
-          DOCUMENT_TYPE: ${{ github.event.client_payload.type }}
+          DOCUMENT_ID: ${{ github.event.client_payload.documentId || github.event.inputs.documentId }}
+          DOCUMENT_TYPE: ${{ github.event.client_payload.type || github.event.inputs.documentType }}
         run: npm run publish
