@@ -383,7 +383,8 @@ async function main() {
 async function publishIndexPages(storage, manifest, basePath) {
   const cssPath = path.join(TEMPLATES_DIR, 'site.css')
   const cssContent = fs.readFileSync(cssPath, 'utf8')
-  await storage.putFile('styles.css', cssContent)
+  const stylesFile = await storage.getFile('styles.css')
+  await storage.putFile('styles.css', cssContent, stylesFile?.sha ?? null)
 
   const articlesIndex = await storage.getFile('articles/index.html')
   await storage.putFile(
