@@ -19,7 +19,18 @@
       "timeHorizon": "3 months",
       "excerpt": "",
       "publishedAt": ""
+    },
+    {
+      "id": "fdedfa2d-feb0-4eed-aceb-5c02427034ab",
+      "slug": "ddog",
+      "title": "DataDog",
+      "ticker": "DDOG",
+      "recommendationType": "buy",
+      "targetPrice": 120,
+      "timeHorizon": "3 months",
+      "excerpt": "",
+      "publishedAt": ""
     }
   ],
-  "updatedAt": "2026-02-28T23:09:03.030Z"
+  "updatedAt": "2026-02-28T23:33:49.038Z"
 }
