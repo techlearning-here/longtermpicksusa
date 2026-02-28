@@ -3,18 +3,54 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Apple (AAPL) | LongTermPicksUSA</title>
+  <title>Apple (AAPL) | Long Term Picks USA</title>
   
+  <link rel="stylesheet" href="/longtermpicksusa/styles.css">
 </head>
 <body>
-  <nav><a href="/longtermpicksusa/">Home</a> | <a href="/longtermpicksusa/articles/">Articles</a> | <a href="/longtermpicksusa/recommendations/">Recommendations</a></nav>
-  <article>
-    <header><h1>Apple (AAPL)</h1></header>
-    <p><strong>Recommendation:</strong> buy</p>
-    <p><strong>Target price:</strong> $260</p>
-    <p><strong>Time horizon:</strong> 3 months</p>
-    <div class="reasons"><p>bla bla2</p></div>
-    <p><em>Chart for AAPL can be loaded here via a third-party API.</em></p>
-  </article>
+  <header class="site-header">
+  <h1 class="site-title"><a href="/longtermpicksusa/" class="site-title-link">Long Term Picks USA</a></h1>
+  <p class="site-tagline">Long-term stock picks and insights for US investors.</p>
+  <nav class="nav">
+    <a href="/longtermpicksusa/">Home</a>
+    <a href="/longtermpicksusa/articles/">Articles</a>
+    <a href="/longtermpicksusa/recommendations/">All recommendations</a>
+  </nav>
+</header>
+
+  <main class="page-content article-page">
+    <article>
+      <header class="article-header">
+        <h1>Apple <span class="ticker-symbol">(AAPL)</span></h1>
+      </header>
+      <div class="meta">
+        <span><strong>Recommendation:</strong> buy</span>
+        <span> · <strong>Target price:</strong> $260</span>
+        <span> · <strong>Time horizon:</strong> 3 months</span>
+      </div>
+      <div class="reasons"><p>bla bla2</p></div>
+      
+      <section class="stock-chart-section" aria-label="Stock chart">
+        <h2 class="stock-quote-title">Chart</h2>
+        <div class="tradingview-widget-container stock-chart-container">
+          <div class="tradingview-widget-container__widget" style="height: calc(100% - 32px); width: 100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+{"autosize":false,"width":"100%","height":520,"symbol":"NASDAQ:AAPL","interval":"D","timezone":"America/New_York","theme":"light","style":"1","locale":"en","allow_symbol_change":false,"calendar":false,"support_host":"https://www.tradingview.com"}
+          </script>
+        </div>
+        <p class="chart-credit">Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a></p>
+      </section>
+      
+    </article>
+  </main>
+  <footer class="site-footer">
+  <nav class="footer-nav">
+    <a href="/longtermpicksusa/">Home</a>
+    <a href="/longtermpicksusa/articles/">Articles</a>
+    <a href="/longtermpicksusa/recommendations/">All recommendations</a>
+  </nav>
+  <p class="footer-copy">Long Term Picks USA — Long-term stock picks for US investors.</p>
+</footer>
+
 </body>
 </html>
