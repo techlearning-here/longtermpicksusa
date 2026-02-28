@@ -1,6 +1,7 @@
 /**
  * Publish pipeline: fetch one document from Sanity, update manifest, generate static HTML, push to GitHub (gh-pages).
- * Run with env: SANITY_PROJECT_ID, SANITY_DATASET, GITHUB_TOKEN, DOCUMENT_ID, DOCUMENT_TYPE, GITHUB_REPOSITORY.
+ * Run with env: SANITY_PROJECT_ID, SANITY_DATASET, GITHUB_TOKEN, GITHUB_REPOSITORY.
+ * Optional: DOCUMENT_ID + DOCUMENT_TYPE to publish a single document; if omitted, rebuilds all pages from current manifest.
  */
 
 const {createClient} = require('@sanity/client')
@@ -21,6 +22,10 @@ function getEnv(name) {
   const v = process.env[name]
   if (!v) throw new Error(`Missing env: ${name}`)
   return v
+}
+
+function getEnvOptional(name) {
+  return process.env[name] || ''
 }
 
 function escapeHtml(s) {
@@ -307,9 +312,17 @@ async function main() {
   const projectId = getEnv('SANITY_PROJECT_ID')
   const dataset = getEnv('SANITY_DATASET')
   const token = getEnv('GITHUB_TOKEN')
-  const documentId = getEnv('DOCUMENT_ID')
-  const documentType = getEnv('DOCUMENT_TYPE')
   const repo = process.env.GITHUB_REPOSITORY || getEnv('GITHUB_REPOSITORY')
+  const documentId = getEnvOptional('DOCUMENT_ID')
+  const documentType = getEnvOptional('DOCUMENT_TYPE')
+  const basePath = getBasePath(repo)
+
+  const isFullRebuild = !documentId || !documentType
+
+  if (isFullRebuild) {
+    await fullRebuild(projectId, dataset, token, repo, basePath)
+    return
+  }
 
   if (documentType !== 'article' && documentType !== 'stockRecommendation') {
     throw new Error(`Invalid DOCUMENT_TYPE: ${documentType}`)
@@ -317,7 +330,6 @@ async function main() {
 
   const doc = await fetchSanityDocument(projectId, dataset, documentId)
   const slug = getSlug(doc)
-  const basePath = getBasePath(repo)
 
   let manifest = {articles: [], recommendations: [], updatedAt: new Date().toISOString()}
   const manifestFile = await githubGetFile(repo, 'manifest.json', token)
@@ -355,6 +367,15 @@ async function main() {
   const manifestSha = manifestFile ? manifestFile.sha : null
   await githubPutFile(repo, 'manifest.json', JSON.stringify(manifest, null, 2), token, manifestSha)
 
+  await publishIndexPages(repo, manifest, token, basePath)
+
+  console.log(`Published ${documentType} ${slug} to gh-pages`)
+}
+
+/**
+ * Publish index.html and listing pages (articles/index.html, recommendations/index.html).
+ */
+async function publishIndexPages(repo, manifest, token, basePath) {
   const articlesIndex = await githubGetFile(repo, 'articles/index.html', token)
   await githubPutFile(
     repo,
@@ -375,8 +396,70 @@ async function main() {
 
   const indexFile = await githubGetFile(repo, 'index.html', token)
   await githubPutFile(repo, 'index.html', buildIndexHtml(manifest, SITE_TITLE, basePath), token, indexFile?.sha)
+}
 
-  console.log(`Published ${documentType} ${slug} to gh-pages`)
+/**
+ * Rebuild all pages from current manifest: fetch each document from Sanity, write detail pages, then index and listings.
+ */
+async function fullRebuild(projectId, dataset, token, repo, basePath) {
+  let manifest = {articles: [], recommendations: [], updatedAt: new Date().toISOString()}
+  const manifestFile = await githubGetFile(repo, 'manifest.json', token)
+  if (manifestFile) {
+    manifest = JSON.parse(manifestFile.content)
+    if (!manifest.articles) manifest.articles = []
+    if (!manifest.recommendations) manifest.recommendations = []
+  } else {
+    console.log('No manifest.json on gh-pages yet. Full rebuild will create it.')
+  }
+
+  const newArticles = []
+  for (const entry of manifest.articles || []) {
+    const id = entry.id
+    if (!id) continue
+    try {
+      const doc = await fetchSanityDocument(projectId, dataset, id)
+      const slug = getSlug(doc)
+      const detailPath = `articles/${slug}.html`
+      const detailHtml = buildArticleHtml(doc, SITE_TITLE, basePath)
+      const existing = await githubGetFile(repo, detailPath, token)
+      await githubPutFile(repo, detailPath, detailHtml, token, existing?.sha ?? null)
+      newArticles.push(manifestEntry(doc, 'article'))
+    } catch (err) {
+      console.warn(`Skipping article ${id}: ${err.message}`)
+    }
+  }
+
+  const newRecommendations = []
+  for (const entry of manifest.recommendations || []) {
+    const id = entry.id
+    if (!id) continue
+    try {
+      const doc = await fetchSanityDocument(projectId, dataset, id)
+      const slug = getSlug(doc)
+      const detailPath = `recommendations/${slug}.html`
+      const detailHtml = buildStockRecommendationHtml(doc, SITE_TITLE, basePath)
+      const existing = await githubGetFile(repo, detailPath, token)
+      await githubPutFile(repo, detailPath, detailHtml, token, existing?.sha ?? null)
+      newRecommendations.push(manifestEntry(doc, 'stockRecommendation'))
+    } catch (err) {
+      console.warn(`Skipping recommendation ${id}: ${err.message}`)
+    }
+  }
+
+  manifest = {
+    articles: newArticles,
+    recommendations: newRecommendations,
+    updatedAt: new Date().toISOString()
+  }
+
+  const manifestSha = manifestFile ? manifestFile.sha : null
+  await githubPutFile(repo, 'manifest.json', JSON.stringify(manifest, null, 2), token, manifestSha)
+
+  await publishIndexPages(repo, manifest, token, basePath)
+
+  console.log(
+    `Full rebuild: ${newArticles.length} articles, ${newRecommendations.length} recommendations published to gh-pages`
+  )
 }
 
 main().catch((err) => {

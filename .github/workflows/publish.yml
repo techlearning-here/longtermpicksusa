@@ -1,16 +1,18 @@
 name: Publish to GitHub Pages
 
 on:
+  push:
+    branches: [main]
   repository_dispatch:
     types: [sanity-publish]
   workflow_dispatch:
     inputs:
       documentId:
         description: 'Document ID (from Sanity)'
-        required: true
+        required: false
       documentType:
         description: 'article or stockRecommendation'
-        required: true
+        required: false
         default: 'stockRecommendation'
 
 permissions:
