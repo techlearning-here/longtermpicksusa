@@ -81,7 +81,7 @@ git checkout main
 
 ## 5. Add repository secrets
 
-The workflow needs your Sanity project and dataset (and uses `GITHUB_TOKEN` automatically).
+The workflow needs your Sanity project, dataset, and a **GitHub token with write access** (the default `GITHUB_TOKEN` often cannot write when the workflow is triggered by `repository_dispatch`).
 
 1. Repo → **Settings** → **Secrets and variables** → **Actions**.
 2. **New repository secret** for each:
@@ -90,10 +90,29 @@ The workflow needs your Sanity project and dataset (and uses `GITHUB_TOKEN` auto
 |--------------------|--------------------|--------------------------------|
 | `SANITY_PROJECT_ID`| `zobf7okj`         | Your Sanity project ID         |
 | `SANITY_DATASET`   | `production`       | Your dataset name              |
+| `GH_PAT`           | *(see below)*      | GitHub token to push to repo   |
+
+**Create `GH_PAT`:**
+
+1. GitHub → **Settings** (your profile) → **Developer settings** → **Personal access tokens** → **Tokens (classic)** or **Fine-grained tokens**.
+2. **Classic:** Create a token with scope **`repo`** (full control of private repositories). **Fine-grained:** Create a token for this repository with permission **Contents: Read and write**.
+3. Copy the token and add it as repo secret **`GH_PAT`** (Actions → Secrets).
+
+The publish workflow uses `GH_PAT` to push files to the `gh-pages` branch.
 
 ---
 
 ## 6. Configure the Sanity webhook (trigger pipeline on publish)
+
+### Where to find Webhooks in Sanity
+
+1. Go to [sanity.io/manage](https://sanity.io/manage) and **select your project** (e.g. project ID `zobf7okj`).
+2. In the **left sidebar**, open **API** (or **Project API** / **Developer**).
+3. Under **API**, look for **Webhooks** (or **Hooks**). If you don’t see it, try **Integrations** or the project **Settings** (gear) and then **API** → **Webhooks**.
+
+If Webhooks still doesn’t appear, use the **CLI option** at the end of this section.
+
+### Create the webhook (in the dashboard)
 
 1. Go to [sanity.io/manage](https://sanity.io/manage) → your project → **API** → **Webhooks**.
 2. **Create webhook**:
@@ -105,32 +124,47 @@ The workflow needs your Sanity project and dataset (and uses `GITHUB_TOKEN` auto
    - **Filter:**  
      `_type in ["article", "stockRecommendation"]`  
      so only those document types trigger the pipeline.
-   - **Projection:** (optional)  
-     `{ _id, _type, "slug": slug.current }`  
-     to send minimal payload.
+   - **Projection** (this is the **request body** GitHub receives): paste the GROQ below. It shapes the payload into the format GitHub `repository_dispatch` expects (`event_type` + `client_payload`).
    - **HTTP method:** POST.
    - **API version:** leave default.
 
-3. **Headers** (required so GitHub accepts the request):
-   - **Authorization:** `Bearer YOUR_GITHUB_PAT`  
-     Use a [Personal Access Token](https://github.com/settings/tokens) with scope `repo`. Create a fine-grained token with “Contents” read/write and “Metadata” read if you prefer.
-   - **Accept:** `application/vnd.github.v3+json`
+3. **Advanced settings** (HTTP method, headers, API version, Drafts, Versions, Secret):
+   - **HTTP method:** **POST**.
+   - **HTTP headers:** Add two rows: **Name** `Authorization`, **Value** `Bearer YOUR_GITHUB_PAT`; **Name** `Accept`, **Value** `application/vnd.github.v3+json`. Use a GitHub [Personal Access Token](https://github.com/settings/tokens) with scope `repo`.
+   - **API version:** Leave default (e.g. v2021-03-25).
+   - **Drafts:** Leave **OFF** — do not check “Trigger webhook when drafts are modified”. You want the webhook only when a document is **published**.
+   - **Versions:** Leave **OFF** — do not check “Trigger webhook when versions are modified”.
+   - **Secret:** Leave empty (optional).
 
-4. **Body** (custom payload for `repository_dispatch`):
-   ```json
+4. **Body (Projection):** In the webhook form, the **Projection** field defines the JSON body sent to GitHub. Paste this **GROQ projection** so the payload matches `repository_dispatch`:
+
+   ```groq
    {
      "event_type": "sanity-publish",
      "client_payload": {
-       "documentId": "{_id}",
-       "type": "{_type}"
+       "documentId": _id,
+       "type": _type
      }
    }
    ```
-   Use the exact placeholders `{_id}` and `{_type}` so Sanity substitutes the document id and type.
+
+   - `_id` and `_type` are the triggered document’s id and type (article or stockRecommendation).
+   - Our workflow reads `github.event.client_payload.documentId` and `github.event.client_payload.type`; the projection above provides those keys.
 
 5. Save the webhook.
 
-After this, when you **publish** an article or stock recommendation in [LongTermPicksUSA Studio](https://longtermpicksusa.sanity.studio/), Sanity will POST to GitHub, the **Publish to GitHub Pages** workflow will run, and the static site on `gh-pages` (and thus GitHub Pages) will update.
+### Alternative: Create webhook via Sanity CLI
+
+If **Webhooks** does not appear under API, create the webhook from the studio folder:
+
+```bash
+cd studio-stock-recommendations
+npx sanity hook create
+```
+
+Use URL = `https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/dispatches`, trigger = create/update, filter = `_type in ["article", "stockRecommendation"]`, HTTP method = POST. Add **Authorization** and **Accept** headers when prompted (or in the dashboard after creation). Set the request body in the dashboard if the CLI doesn’t support it.
+
+After this, when you **publish** an article or stock recommendation in [LongTermPicksUSA Studio](https://longtermpicksusa.sanity.studio/), Sanity will POST to GitHub, the **Publish to GitHub Pages** workflow will run, and the static site on `gh-pages` will update.
 
 ---
 
@@ -142,7 +176,7 @@ After this, when you **publish** an article or stock recommendation in [LongTerm
 | 2 | Pushed the project (root with `.github`, `scripts`, `docs`, `studio-stock-recommendations`) to `main`. |
 | 3 | Created `gh-pages` branch with initial `manifest.json`. |
 | 4 | Enabled GitHub Pages from `gh-pages`. |
-| 5 | Set `SANITY_PROJECT_ID` and `SANITY_DATASET` in repo secrets. |
+| 5 | Set `SANITY_PROJECT_ID`, `SANITY_DATASET`, and `GH_PAT` in repo secrets. |
 | 6 | Added a Sanity webhook that calls GitHub `repository_dispatch` with `documentId` and `type`. |
 
 **Test:** Publish an article or recommendation in the Studio; check the **Actions** tab for the “Publish to GitHub Pages” workflow run; then open `https://YOUR_USERNAME.github.io/YOUR_REPO/`.
