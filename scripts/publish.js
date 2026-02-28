@@ -263,7 +263,8 @@ async function main() {
       ? buildArticleHtml(doc, SITE_TITLE, basePath)
       : buildStockRecommendationHtml(doc, SITE_TITLE, basePath)
 
-  await githubPutFile(repo, detailPath, detailHtml, token)
+  const existingDetail = await githubGetFile(repo, detailPath, token)
+  await githubPutFile(repo, detailPath, detailHtml, token, existingDetail?.sha)
 
   const manifestSha = manifestFile ? manifestFile.sha : null
   await githubPutFile(repo, 'manifest.json', JSON.stringify(manifest, null, 2), token, manifestSha)
