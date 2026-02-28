@@ -1,12 +1,16 @@
 {
   "name": "longtermpicksusa",
   "private": true,
-  "description": "LongTermPicksUSA – static site pipeline (Sanity → GitHub Pages)",
+  "description": "Long Term Picks USA – static site pipeline (Sanity → GitHub Pages)",
   "scripts": {
-    "publish": "node scripts/publish.js"
+    "publish": "node scripts/publish.js",
+    "build:local": "OUTPUT_DIR=dist node scripts/publish.js",
+    "preview": "npm run build:local && npx serve dist -l 3000"
   },
   "dependencies": {
     "@portabletext/to-html": "^3.0.0",
-    "@sanity/client": "^6.22.0"
+    "@sanity/client": "^6.22.0",
+    "dotenv": "^17.3.1",
+    "ejs": "^4.0.1"
   }
 }

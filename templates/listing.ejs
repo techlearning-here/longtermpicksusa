@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= pageTitle %> | <%= siteTitle %></title>
+  <link rel="stylesheet" href="<%= basePath %>/styles.css">
+</head>
+<body>
+  <%- include('partials/header', { basePath, siteTitle }) %>
+  <main class="page-content listing-page">
+    <h1 class="listing-title"><%= siteTitle %></h1>
+    <h2 class="section-title"><%= pageTitle %></h2>
+    <div class="card">
+      <ul class="list-items">
+<% items.forEach(function(item) { %>
+        <li><a href="<%= listBase %>/<%= item.slug %>.html"><%= item.title %></a></li>
+<% }); %>
+      </ul>
+    </div>
+  </main>
+  <%- include('partials/footer', { basePath, siteTitle }) %>
+</body>
+</html>

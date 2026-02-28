@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %> (<%= ticker %>) | <%= siteTitle %></title>
+  <% if (published) { %><meta name="date" content="<%= published %>"><% } %>
+  <link rel="stylesheet" href="<%= basePath %>/styles.css">
+</head>
+<body>
+  <%- include('partials/header', { basePath, siteTitle }) %>
+  <main class="page-content article-page">
+    <article>
+      <header class="article-header">
+        <h1><%= title %> <span class="ticker-symbol">(<%= ticker %>)</span></h1>
+      </header>
+      <div class="meta">
+        <span><strong>Recommendation:</strong> <%= recommendationType %></span>
+        <% if (targetPrice !== '') { %><span> · <strong>Target price:</strong> $<%= targetPrice %></span><% } %>
+        <% if (timeHorizon) { %><span> · <strong>Time horizon:</strong> <%= timeHorizon %></span><% } %>
+      </div>
+      <div class="reasons"><%- reasonsHtml %></div>
+      <% if (ticker) { %>
+      <section class="stock-chart-section" aria-label="Stock chart">
+        <h2 class="stock-quote-title">Chart</h2>
+        <div class="tradingview-widget-container stock-chart-container">
+          <div class="tradingview-widget-container__widget" style="height: calc(100% - 32px); width: 100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+<%- tradingViewChartConfig %>
+          </script>
+        </div>
+        <p class="chart-credit">Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a></p>
+      </section>
+      <% } %>
+    </article>
+  </main>
+  <%- include('partials/footer', { basePath, siteTitle }) %>
+</body>
+</html>

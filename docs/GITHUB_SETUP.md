@@ -1,4 +1,4 @@
-# GitHub Setup – LongTermPicksUSA
+# GitHub Setup – Long Term Picks USA
 
 Wire up the repo, GitHub Pages, and the Sanity webhook so that when you publish in the Studio, the static site updates automatically.
 
@@ -164,7 +164,7 @@ npx sanity hook create
 
 Use URL = `https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/dispatches`, trigger = create/update, filter = `_type in ["article", "stockRecommendation"]`, HTTP method = POST. Add **Authorization** and **Accept** headers when prompted (or in the dashboard after creation). Set the request body in the dashboard if the CLI doesn’t support it.
 
-After this, when you **publish** an article or stock recommendation in [LongTermPicksUSA Studio](https://longtermpicksusa.sanity.studio/), Sanity will POST to GitHub, the **Publish to GitHub Pages** workflow will run, and the static site on `gh-pages` will update.
+After this, when you **publish** an article or stock recommendation in [Long Term Picks USA Studio](https://longtermpicksusa.sanity.studio/), Sanity will POST to GitHub, the **Publish to GitHub Pages** workflow will run, and the static site on `gh-pages` will update.
 
 ---
 

@@ -1,6 +1,6 @@
 # Long-Term Stocks – Component & Architecture Diagrams
 
-**Site name:** LongTermPicksUSA.
+**Site name:** Long Term Picks USA.
 
 Diagrammatic view of the system components and flows. Diagrams use [Mermaid](https://mermaid.js.org/) and render on GitHub and in many Markdown viewers.
 

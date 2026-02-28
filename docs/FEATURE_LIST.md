@@ -1,6 +1,6 @@
-# LongTermPicksUSA – Feature List
+# Long Term Picks USA – Feature List
 
-**Site name:** [LongTermPicksUSA](https://longtermpicksusa.com) (domain available). A USA-focused finance and long-term stock recommendations website (in the spirit of Motley Fool). This document captures the agreed product and technical features.
+**Site name:** [Long Term Picks USA](https://longtermpicksusa.com) (domain available). A USA-focused finance and long-term stock recommendations website (in the spirit of Motley Fool). This document captures the agreed product and technical features.
 
 **Current architecture:** **Sanity** (CMS + Studio + assets) → on publish, **Sanity webhook** triggers a **GitHub Actions** workflow → workflow fetches one document, updates **manifest** in repo, generates static HTML, pushes only changed files via **GitHub API** → **GitHub Pages** serves the site from that repo branch. No Vercel; no server to host.
 
@@ -230,4 +230,4 @@ The project will use **Test Driven Development**: write failing tests first, the
 
 ---
 
-*This document is the single feature list for the **LongTermPicksUSA** project. Implementation should follow this scope, technical choices, and TDD approach.*
+*This document is the single feature list for the **Long Term Picks USA** project. Implementation should follow this scope, technical choices, and TDD approach.*

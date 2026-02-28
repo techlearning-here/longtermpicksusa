@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= siteTitle %></title>
+  <link rel="stylesheet" href="<%= basePath %>/styles.css">
+</head>
+<body>
+  <%- include('partials/header', { basePath, siteTitle }) %>
+  <main class="main">
+    <h2 class="section-title">Recent stock recommendations</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Company</th>
+            <th>Recommendation</th>
+            <th>Date</th>
+            <th>Target price</th>
+            <th>Time horizon</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+<% recommendations.forEach(function(r) { %>
+    <tr>
+      <td class="col-ticker"><a href="<%= r.detailUrl %>" class="link-ticker"><%= r.ticker %></a></td>
+      <td class="col-company"><%= r.title %></td>
+      <td class="col-rec"><span class="badge <%= r.badgeClass %>"><%= r.recommendationType %></span></td>
+      <td class="col-date"><%= r.dateStr %></td>
+      <td class="col-target"><%= r.targetStr %></td>
+      <td class="col-horizon"><%= r.timeHorizon %></td>
+      <td class="col-action"><a href="<%= r.detailUrl %>" class="link-view">View</a></td>
+    </tr>
+<% }); %>
+<% if (recommendations.length === 0) { %>
+    <tr><td colspan="7" class="empty-state">No recommendations yet.</td></tr>
+<% } %>
+        </tbody>
+      </table>
+    </div>
+    <p class="footer-links"><a href="<%= basePath %>/recommendations/">View all recommendations</a><a href="<%= basePath %>/articles/">Articles</a></p>
+  </main>
+  <%- include('partials/footer', { basePath, siteTitle }) %>
+</body>
+</html>

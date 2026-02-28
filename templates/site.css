@@ -1,0 +1,482 @@
+/* Long Term Picks USA – shared site styles */
+
+:root {
+  --bg: #f1f5f9;
+  --bg-header: #0f172a;
+  --card: #ffffff;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --buy: #059669;
+  --buy-bg: #d1fae5;
+  --sell: #dc2626;
+  --sell-bg: #fee2e2;
+  --border: #e2e8f0;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  --font-sans: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Site header – dark bar */
+.site-header {
+  background: var(--bg-header);
+  color: #fff;
+  padding: 1rem 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.site-header .site-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  letter-spacing: -0.02em;
+}
+
+.site-header .site-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-header .site-title-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.site-header .site-tagline {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.site-header .nav {
+  margin-top: 0.875rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.25rem;
+}
+
+.site-header .nav a {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.site-header .nav a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* Site footer – same on every page */
+.site-footer {
+  margin-top: auto;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-header);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.875rem;
+}
+
+.site-footer .footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.site-footer .footer-nav a {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.site-footer .footer-nav a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.site-footer .footer-copy {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8125rem;
+}
+
+/* Main content area */
+.main,
+.page-content {
+  flex: 1;
+}
+
+.main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.75rem 1.5rem;
+  width: 100%;
+}
+
+.page-content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.75rem 1.5rem;
+  width: 100%;
+}
+
+/* Nav partial when used inside a light card (e.g. article/listing) */
+nav.site-nav {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
+  margin-bottom: 0;
+}
+
+nav.site-nav a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  margin-right: 1.25rem;
+}
+
+nav.site-nav a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+/* Section title */
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 1rem 0;
+}
+
+/* Card / table container */
+.table-wrap,
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.875rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: var(--bg);
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr:hover {
+  background: rgba(37, 99, 235, 0.03);
+}
+
+.col-ticker {
+  font-weight: 600;
+}
+
+.link-ticker {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.link-ticker:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.badge-buy {
+  background: var(--buy-bg);
+  color: var(--buy);
+}
+
+.badge-sell {
+  background: var(--sell-bg);
+  color: var(--sell);
+}
+
+.badge-neutral {
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.link-view {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link-view:hover {
+  text-decoration: underline;
+}
+
+.empty-state {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 1.5rem;
+}
+
+/* Footer links */
+.footer-links {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.footer-links a {
+  color: var(--accent);
+  text-decoration: none;
+  margin-right: 1rem;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+/* Article / recommendation detail page */
+.article-page .article-header {
+  margin-bottom: 1.5rem;
+}
+
+.article-page .article-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.article-page .article-header .ticker-symbol {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.95em;
+}
+
+.article-page .meta {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.article-page .content,
+.article-page .reasons {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.article-page .content p,
+.article-page .reasons p {
+  margin: 0 0 1rem 0;
+}
+
+.article-page .content p:last-child,
+.article-page .reasons p:last-child {
+  margin-bottom: 0;
+}
+
+.article-page .content strong,
+.article-page .reasons strong {
+  font-weight: 600;
+}
+
+.article-page .chart-placeholder {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--bg);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Live stock quote (recommendation page) */
+.stock-quote-section {
+  margin-top: 1.5rem;
+}
+
+.stock-chart-section {
+  margin-top: 1.5rem;
+}
+
+.stock-chart-section .stock-chart-container {
+  height: 520px;
+  width: 100%;
+  min-height: 520px;
+}
+
+.stock-chart-section .chart-credit {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.stock-chart-section .chart-credit a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.stock-chart-section .chart-credit a:hover {
+  text-decoration: underline;
+}
+
+.stock-quote-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: var(--text);
+}
+
+.stock-quote-box {
+  padding: 1rem 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+}
+
+.stock-quote-price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.stock-quote-change {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.stock-quote-change.quote-up {
+  color: var(--buy);
+}
+
+.stock-quote-change.quote-down {
+  color: var(--sell);
+}
+
+.stock-quote-meta {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.stock-quote-hint,
+.stock-quote-error {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.stock-quote-hint code {
+  background: var(--bg);
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+}
+
+.stock-quote-loading {
+  color: var(--text-muted);
+}
+
+/* Listing page */
+.listing-page .listing-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.list-items {
+  list-style: none;
+  padding: 0 1rem 0.5rem;
+  margin: 0;
+}
+
+.list-items li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.list-items li:last-child {
+  border-bottom: 0;
+}
+
+.list-items a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.list-items a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .main,
+  .page-content {
+    padding: 1rem;
+  }
+
+  th:nth-child(5),
+  th:nth-child(6),
+  .col-target,
+  .col-horizon {
+    display: none;
+  }
+
+  th,
+  td {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .article-page .article-header h1 {
+    font-size: 1.375rem;
+  }
+}

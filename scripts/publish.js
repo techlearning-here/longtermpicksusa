@@ -2,13 +2,22 @@
  * Publish pipeline: fetch one document from Sanity, update manifest, generate static HTML, push to GitHub (gh-pages).
  * Run with env: SANITY_PROJECT_ID, SANITY_DATASET, GITHUB_TOKEN, GITHUB_REPOSITORY.
  * Optional: DOCUMENT_ID + DOCUMENT_TYPE to publish a single document; if omitted, rebuilds all pages from current manifest.
+ * Local preview: set OUTPUT_DIR=dist (and optionally BASE_PATH='') to write to disk instead of GitHub; GITHUB_* not required.
+ * Loads .env from project root if present (e.g. SANITY_PROJECT_ID, SANITY_DATASET).
  */
+
+require('dotenv').config()
 
 const {createClient} = require('@sanity/client')
 const {toHTML} = require('@portabletext/to-html')
+const path = require('path')
+const fs = require('fs')
+const ejs = require('ejs')
 
 const BRANCH = 'gh-pages'
-const SITE_TITLE = 'LongTermPicksUSA'
+const SITE_TITLE = 'Long Term Picks USA'
+const TEMPLATES_DIR = path.join(__dirname, '..', 'templates')
+const OUTPUT_DIR = process.env.OUTPUT_DIR || null
 
 /** Base path for GitHub Project Pages (e.g. /longtermpicksusa). Empty for user/org site (username.github.io). */
 function getBasePath(repo) {
@@ -61,92 +70,90 @@ function getSlug(doc) {
   return (s && (typeof s === 'string' ? s : s.current)) || doc.ticker || doc._id?.replace(/^drafts\./, '') || 'untitled'
 }
 
+/**
+ * Render an EJS template from the templates directory.
+ * @param {string} name - Template filename (e.g. 'article.ejs')
+ * @param {object} data - Data passed to the template
+ * @returns {string} Rendered HTML
+ */
+function renderTemplate(name, data) {
+  const filePath = path.join(TEMPLATES_DIR, name)
+  const templateStr = fs.readFileSync(filePath, 'utf8')
+  return ejs.render(templateStr, data, {filename: filePath})
+}
+
 function buildArticleHtml(doc, siteTitle, basePath) {
-  const slug = getSlug(doc)
   const title = doc.title || 'Untitled'
   const bodyHtml = portableTextToHtml(doc.body)
   const excerpt = escapeHtml(doc.excerpt || '')
   const published = doc.publishedAt ? new Date(doc.publishedAt).toISOString() : ''
   const base = basePath || ''
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)} | ${escapeHtml(siteTitle)}</title>
-  <meta name="description" content="${excerpt}">
-  ${published ? `<meta name="date" content="${published}">` : ''}
-</head>
-<body>
-  <nav><a href="${base}/">Home</a> | <a href="${base}/articles/">Articles</a> | <a href="${base}/recommendations/">Recommendations</a></nav>
-  <article>
-    <header><h1>${escapeHtml(title)}</h1></header>
-    <div class="content">${bodyHtml}</div>
-  </article>
-</body>
-</html>`
+  return renderTemplate('article.ejs', {
+    siteTitle,
+    basePath: base,
+    title,
+    excerpt,
+    published: published || false,
+    bodyHtml
+  })
 }
 
 function buildStockRecommendationHtml(doc, siteTitle, basePath) {
-  const slug = getSlug(doc)
   const title = doc.companyName || doc.ticker || 'Untitled'
   const ticker = doc.ticker || ''
   const reasonsHtml = portableTextToHtml(doc.reasons)
   const recommendationType = doc.recommendationType || ''
   const targetPrice = doc.targetPrice != null ? doc.targetPrice : ''
-  const timeHorizon = escapeHtml(doc.timeHorizon || '')
+  const timeHorizon = doc.timeHorizon || ''
   const published = doc.publishedAt ? new Date(doc.publishedAt).toISOString() : ''
   const base = basePath || ''
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)} (${escapeHtml(ticker)}) | ${escapeHtml(siteTitle)}</title>
-  ${published ? `<meta name="date" content="${published}">` : ''}
-</head>
-<body>
-  <nav><a href="${base}/">Home</a> | <a href="${base}/articles/">Articles</a> | <a href="${base}/recommendations/">Recommendations</a></nav>
-  <article>
-    <header><h1>${escapeHtml(title)} (${escapeHtml(ticker)})</h1></header>
-    <p><strong>Recommendation:</strong> ${escapeHtml(recommendationType)}</p>
-    ${targetPrice !== '' ? `<p><strong>Target price:</strong> $${escapeHtml(String(targetPrice))}</p>` : ''}
-    ${timeHorizon ? `<p><strong>Time horizon:</strong> ${timeHorizon}</p>` : ''}
-    <div class="reasons">${reasonsHtml}</div>
-    <p><em>Chart for ${escapeHtml(ticker)} can be loaded here via a third-party API.</em></p>
-  </article>
-</body>
-</html>`
+  const symbolForChart = ticker ? 'NASDAQ:' + ticker.toUpperCase() : ''
+  const tradingViewChartConfig =
+    symbolForChart
+      ? JSON.stringify({
+          autosize: false,
+          width: '100%',
+          height: 520,
+          symbol: symbolForChart,
+          interval: 'D',
+          timezone: 'America/New_York',
+          theme: 'light',
+          style: '1',
+          locale: 'en',
+          allow_symbol_change: false,
+          calendar: false,
+          support_host: 'https://www.tradingview.com'
+        })
+      : ''
+  return renderTemplate('recommendation.ejs', {
+    siteTitle,
+    basePath: base,
+    title,
+    ticker,
+    recommendationType,
+    targetPrice: String(targetPrice),
+    timeHorizon,
+    published: published || false,
+    reasonsHtml,
+    tradingViewChartConfig
+  })
 }
 
 function buildListingHtml(manifest, type, siteTitle, basePath) {
   const items = type === 'article' ? (manifest.articles || []) : (manifest.recommendations || [])
-  const base = (basePath || '') + (type === 'article' ? '/articles' : '/recommendations')
-  const title = type === 'article' ? 'Articles' : 'Stock Recommendations'
-  const list = items
-    .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0))
-    .map(
-      (item) =>
-        `    <li><a href="${base}/${escapeHtml(item.slug)}.html">${escapeHtml(item.title)}</a></li>`
-    )
-    .join('\n')
-  const b = basePath || ''
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title} | ${escapeHtml(siteTitle)}</title>
-</head>
-<body>
-  <h1>${escapeHtml(siteTitle)}</h1>
-  <nav><a href="${b}/">Home</a> | <a href="${b}/articles/">Articles</a> | <a href="${b}/recommendations/">Recommendations</a></nav>
-  <h2>${title}</h2>
-  <ul>
-${list}
-  </ul>
-</body>
-</html>`
+  const sorted = [...items].sort(
+    (a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0)
+  )
+  const listBase =
+    (basePath || '') + (type === 'article' ? '/articles' : '/recommendations')
+  const pageTitle = type === 'article' ? 'Articles' : 'Stock Recommendations'
+  return renderTemplate('listing.ejs', {
+    siteTitle,
+    basePath: basePath || '',
+    pageTitle,
+    listBase,
+    items: sorted.map((item) => ({slug: item.slug, title: item.title}))
+  })
 }
 
 function formatRecommendationDate(isoDate) {
@@ -156,107 +163,36 @@ function formatRecommendationDate(isoDate) {
 }
 
 function buildIndexHtml(manifest, siteTitle, basePath) {
-  const recommendations = (manifest.recommendations || [])
+  const rawRecs = (manifest.recommendations || [])
     .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0))
     .slice(0, 10)
   const b = basePath || ''
 
-  const rows = recommendations.length
-    ? recommendations
-        .map(
-          (r) => {
-            const recType = (r.recommendationType || '').toLowerCase()
-            const isBuy = recType === 'buy'
-            const badgeClass = isBuy ? 'badge-buy' : recType === 'sell' ? 'badge-sell' : 'badge-neutral'
-            const targetStr =
-              r.targetPrice != null && r.targetPrice !== '' ? `$${Number(r.targetPrice).toLocaleString()}` : '—'
-            const dateStr = formatRecommendationDate(r.publishedAt)
-            const detailUrl = `${b}/recommendations/${escapeHtml(r.slug)}.html`
-            return `    <tr>
-      <td class="col-ticker"><a href="${detailUrl}" class="link-ticker">${escapeHtml(r.ticker || '—')}</a></td>
-      <td class="col-company">${escapeHtml(r.title || '—')}</td>
-      <td class="col-rec"><span class="badge ${badgeClass}">${escapeHtml(r.recommendationType || '—')}</span></td>
-      <td class="col-date">${escapeHtml(dateStr)}</td>
-      <td class="col-target">${escapeHtml(targetStr)}</td>
-      <td class="col-horizon">${escapeHtml(r.timeHorizon || '—')}</td>
-      <td class="col-action"><a href="${detailUrl}" class="link-view">View</a></td>
-    </tr>`
-          }
-        )
-        .join('\n')
-    : `    <tr><td colspan="7" class="empty-state">No recommendations yet.</td></tr>`
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(siteTitle)}</title>
-  <style>
-    :root { --bg: #f8f9fa; --card: #fff; --text: #1a1a1a; --muted: #5c5c5c; --accent: #0d6efd; --buy: #198754; --sell: #dc3545; --border: #dee2e6; }
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
-    .site-header { background: var(--card); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; }
-    .site-title { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.25rem 0; }
-    .site-tagline { font-size: 0.9rem; color: var(--muted); margin: 0; }
-    nav { margin-top: 0.75rem; }
-    nav a { color: var(--accent); text-decoration: none; margin-right: 1rem; }
-    nav a:hover { text-decoration: underline; }
-    .main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
-    .section-title { font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; }
-    .table-wrap { background: var(--card); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
-    th { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.02em; color: var(--muted); background: var(--bg); }
-    tr:last-child td { border-bottom: 0; }
-    .col-ticker { font-weight: 600; }
-    .link-ticker { color: var(--text); text-decoration: none; }
-    .link-ticker:hover { color: var(--accent); text-decoration: underline; }
-    .badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
-    .badge-buy { background: #d1e7dd; color: var(--buy); }
-    .badge-sell { background: #f8d7da; color: var(--sell); }
-    .badge-neutral { background: var(--bg); color: var(--muted); }
-    .link-view { color: var(--accent); text-decoration: none; font-weight: 500; }
-    .link-view:hover { text-decoration: underline; }
-    .empty-state { color: var(--muted); font-style: italic; text-align: center; }
-    .footer-links { margin-top: 1.5rem; font-size: 0.9rem; }
-    .footer-links a { color: var(--accent); text-decoration: none; margin-right: 1rem; }
-    @media (max-width: 640px) {
-      th:nth-child(5), th:nth-child(6), .col-target, .col-horizon { display: none; }
-      th, td { padding: 0.5rem; font-size: 0.9rem; }
+  const recommendations = rawRecs.map((r) => {
+    const recType = (r.recommendationType || '').toLowerCase()
+    const isBuy = recType === 'buy'
+    const badgeClass = isBuy ? 'badge-buy' : recType === 'sell' ? 'badge-sell' : 'badge-neutral'
+    const targetStr =
+      r.targetPrice != null && r.targetPrice !== ''
+        ? `$${Number(r.targetPrice).toLocaleString()}`
+        : '—'
+    return {
+      ticker: r.ticker || '—',
+      title: r.title || '—',
+      recommendationType: r.recommendationType || '—',
+      dateStr: formatRecommendationDate(r.publishedAt),
+      targetStr,
+      timeHorizon: r.timeHorizon || '—',
+      badgeClass,
+      detailUrl: `${b}/recommendations/${r.slug}.html`
     }
-  </style>
-</head>
-<body>
-  <header class="site-header">
-    <h1 class="site-title">${escapeHtml(siteTitle)}</h1>
-    <p class="site-tagline">Long-term stock picks and insights for US investors.</p>
-    <nav><a href="${b}/">Home</a><a href="${b}/articles/">Articles</a><a href="${b}/recommendations/">All recommendations</a></nav>
-  </header>
-  <main class="main">
-    <h2 class="section-title">Recent stock recommendations</h2>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Ticker</th>
-            <th>Company</th>
-            <th>Recommendation</th>
-            <th>Date</th>
-            <th>Target price</th>
-            <th>Time horizon</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-${rows}
-        </tbody>
-      </table>
-    </div>
-    <p class="footer-links"><a href="${b}/recommendations/">View all recommendations</a><a href="${b}/articles/">Articles</a></p>
-  </main>
-</body>
-</html>`
+  })
+
+  return renderTemplate('index.ejs', {
+    siteTitle,
+    basePath: b,
+    recommendations
+  })
 }
 
 function manifestEntry(doc, type) {
@@ -308,19 +244,86 @@ async function githubPutFile(repo, path, content, token, sha = null) {
   if (!res.ok) throw new Error(`GitHub PUT ${path}: ${res.status} ${await res.text()}`)
 }
 
+/**
+ * Create a storage adapter: either GitHub (repo + token) or local filesystem (outDir).
+ * @returns {{ getFile: (path: string) => Promise<{content: string, sha: string|null}|null>, putFile: (path: string, content: string, sha?: string|null) => Promise<void>, isLocal: boolean }}
+ */
+function createStorage(outDir, repo, token) {
+  if (outDir) {
+    const dir = path.resolve(outDir)
+    return {
+      isLocal: true,
+      async getFile(filePath) {
+        const full = path.join(dir, filePath)
+        try {
+          const content = fs.readFileSync(full, 'utf8')
+          return {content, sha: null}
+        } catch (e) {
+          if (e.code === 'ENOENT') return null
+          throw e
+        }
+      },
+      async putFile(filePath, content) {
+        const full = path.join(dir, filePath)
+        fs.mkdirSync(path.dirname(full), {recursive: true})
+        fs.writeFileSync(full, content, 'utf8')
+      }
+    }
+  }
+  return {
+    isLocal: false,
+    async getFile(filePath) {
+      return githubGetFile(repo, filePath, token)
+    },
+    async putFile(filePath, content, sha = null) {
+      return githubPutFile(repo, filePath, content, token, sha)
+    }
+  }
+}
+
+const SANITY_DOC_FIELDS =
+  '_id, _type, title, slug, body, excerpt, featuredImage, category, publishedAt, ticker, companyName, recommendationType, targetPrice, timeHorizon, reasons, image'
+
+/**
+ * Fetch all published articles and stock recommendations from Sanity (for local build when no manifest exists).
+ */
+async function fetchAllFromSanity(projectId, dataset) {
+  const client = createClient({
+    projectId,
+    dataset,
+    useCdn: true,
+    apiVersion: '2024-01-01'
+  })
+  const [articles, recommendations] = await Promise.all([
+    client.fetch(`*[_type == "article"]{ ${SANITY_DOC_FIELDS} }`),
+    client.fetch(`*[_type == "stockRecommendation"]{ ${SANITY_DOC_FIELDS} }`)
+  ])
+  return {articles: articles || [], recommendations: recommendations || []}
+}
+
 async function main() {
   const projectId = getEnv('SANITY_PROJECT_ID')
   const dataset = getEnv('SANITY_DATASET')
-  const token = getEnv('GITHUB_TOKEN')
-  const repo = process.env.GITHUB_REPOSITORY || getEnv('GITHUB_REPOSITORY')
+  const isLocal = Boolean(OUTPUT_DIR)
+
+  let basePath
+  let storage
+  if (isLocal) {
+    basePath = process.env.BASE_PATH || ''
+    storage = createStorage(OUTPUT_DIR, null, null)
+  } else {
+    const token = getEnv('GITHUB_TOKEN')
+    const repo = process.env.GITHUB_REPOSITORY || getEnv('GITHUB_REPOSITORY')
+    basePath = getBasePath(repo)
+    storage = createStorage(null, repo, token)
+  }
+
   const documentId = getEnvOptional('DOCUMENT_ID')
   const documentType = getEnvOptional('DOCUMENT_TYPE')
-  const basePath = getBasePath(repo)
-
   const isFullRebuild = !documentId || !documentType
 
   if (isFullRebuild) {
-    await fullRebuild(projectId, dataset, token, repo, basePath)
+    await fullRebuild(projectId, dataset, storage, basePath, isLocal)
     return
   }
 
@@ -332,13 +335,13 @@ async function main() {
   const slug = getSlug(doc)
 
   let manifest = {articles: [], recommendations: [], updatedAt: new Date().toISOString()}
-  const manifestFile = await githubGetFile(repo, 'manifest.json', token)
+  const manifestFile = await storage.getFile('manifest.json')
   if (manifestFile) {
     manifest = JSON.parse(manifestFile.content)
     if (!manifest.articles) manifest.articles = []
     if (!manifest.recommendations) manifest.recommendations = []
   } else {
-    console.log('No manifest.json on gh-pages yet. Will create it. Ensure gh-pages branch exists.')
+    if (!isLocal) console.log('No manifest.json on gh-pages yet. Will create it. Ensure gh-pages branch exists.')
   }
 
   const entry = manifestEntry(doc, documentType)
@@ -355,59 +358,86 @@ async function main() {
       ? buildArticleHtml(doc, SITE_TITLE, basePath)
       : buildStockRecommendationHtml(doc, SITE_TITLE, basePath)
 
-  const existingDetail = await githubGetFile(repo, detailPath, token)
+  const existingDetail = await storage.getFile(detailPath)
   const detailSha = existingDetail?.sha ?? null
-  if (existingDetail && !detailSha) {
+  if (existingDetail && !detailSha && !isLocal) {
     throw new Error(
       `GitHub GET ${detailPath} returned content but no sha; cannot update file.`
     )
   }
-  await githubPutFile(repo, detailPath, detailHtml, token, detailSha)
+  await storage.putFile(detailPath, detailHtml, detailSha)
 
   const manifestSha = manifestFile ? manifestFile.sha : null
-  await githubPutFile(repo, 'manifest.json', JSON.stringify(manifest, null, 2), token, manifestSha)
+  await storage.putFile('manifest.json', JSON.stringify(manifest, null, 2), manifestSha)
 
-  await publishIndexPages(repo, manifest, token, basePath)
+  await publishIndexPages(storage, manifest, basePath)
 
-  console.log(`Published ${documentType} ${slug} to gh-pages`)
+  console.log(
+    isLocal ? `Built ${documentType} ${slug} to ${OUTPUT_DIR}` : `Published ${documentType} ${slug} to gh-pages`
+  )
 }
 
 /**
- * Publish index.html and listing pages (articles/index.html, recommendations/index.html).
+ * Publish index.html, listing pages, and shared stylesheet.
  */
-async function publishIndexPages(repo, manifest, token, basePath) {
-  const articlesIndex = await githubGetFile(repo, 'articles/index.html', token)
-  await githubPutFile(
-    repo,
+async function publishIndexPages(storage, manifest, basePath) {
+  const cssPath = path.join(TEMPLATES_DIR, 'site.css')
+  const cssContent = fs.readFileSync(cssPath, 'utf8')
+  await storage.putFile('styles.css', cssContent)
+
+  const articlesIndex = await storage.getFile('articles/index.html')
+  await storage.putFile(
     'articles/index.html',
     buildListingHtml(manifest, 'article', SITE_TITLE, basePath),
-    token,
     articlesIndex?.sha
   )
 
-  const recsIndex = await githubGetFile(repo, 'recommendations/index.html', token)
-  await githubPutFile(
-    repo,
+  const recsIndex = await storage.getFile('recommendations/index.html')
+  await storage.putFile(
     'recommendations/index.html',
     buildListingHtml(manifest, 'stockRecommendation', SITE_TITLE, basePath),
-    token,
     recsIndex?.sha
   )
 
-  const indexFile = await githubGetFile(repo, 'index.html', token)
-  await githubPutFile(repo, 'index.html', buildIndexHtml(manifest, SITE_TITLE, basePath), token, indexFile?.sha)
+  const indexFile = await storage.getFile('index.html')
+  await storage.putFile('index.html', buildIndexHtml(manifest, SITE_TITLE, basePath), indexFile?.sha)
 }
 
 /**
  * Rebuild all pages from current manifest: fetch each document from Sanity, write detail pages, then index and listings.
+ * When storage.isLocal and no manifest exists, fetches all articles/recommendations from Sanity to build the site.
  */
-async function fullRebuild(projectId, dataset, token, repo, basePath) {
+async function fullRebuild(projectId, dataset, storage, basePath, isLocal) {
   let manifest = {articles: [], recommendations: [], updatedAt: new Date().toISOString()}
-  const manifestFile = await githubGetFile(repo, 'manifest.json', token)
+  const manifestFile = await storage.getFile('manifest.json')
+
   if (manifestFile) {
     manifest = JSON.parse(manifestFile.content)
     if (!manifest.articles) manifest.articles = []
     if (!manifest.recommendations) manifest.recommendations = []
+  } else if (isLocal) {
+    console.log('No manifest in output dir. Fetching all content from Sanity...')
+    const {articles: articleDocs, recommendations: recDocs} = await fetchAllFromSanity(projectId, dataset)
+    manifest.articles = articleDocs.map((d) => manifestEntry(d, 'article'))
+    manifest.recommendations = recDocs.map((d) => manifestEntry(d, 'stockRecommendation'))
+    manifest.updatedAt = new Date().toISOString()
+
+    for (const doc of articleDocs) {
+      const slug = getSlug(doc)
+      const detailPath = `articles/${slug}.html`
+      await storage.putFile(detailPath, buildArticleHtml(doc, SITE_TITLE, basePath))
+    }
+    for (const doc of recDocs) {
+      const slug = getSlug(doc)
+      const detailPath = `recommendations/${slug}.html`
+      await storage.putFile(detailPath, buildStockRecommendationHtml(doc, SITE_TITLE, basePath))
+    }
+    await storage.putFile('manifest.json', JSON.stringify(manifest, null, 2))
+    await publishIndexPages(storage, manifest, basePath)
+    console.log(
+      `Local build: ${manifest.articles.length} articles, ${manifest.recommendations.length} recommendations → ${OUTPUT_DIR}`
+    )
+    return
   } else {
     console.log('No manifest.json on gh-pages yet. Full rebuild will create it.')
   }
@@ -421,8 +451,8 @@ async function fullRebuild(projectId, dataset, token, repo, basePath) {
       const slug = getSlug(doc)
       const detailPath = `articles/${slug}.html`
       const detailHtml = buildArticleHtml(doc, SITE_TITLE, basePath)
-      const existing = await githubGetFile(repo, detailPath, token)
-      await githubPutFile(repo, detailPath, detailHtml, token, existing?.sha ?? null)
+      const existing = await storage.getFile(detailPath)
+      await storage.putFile(detailPath, detailHtml, existing?.sha ?? null)
       newArticles.push(manifestEntry(doc, 'article'))
     } catch (err) {
       console.warn(`Skipping article ${id}: ${err.message}`)
@@ -438,8 +468,8 @@ async function fullRebuild(projectId, dataset, token, repo, basePath) {
       const slug = getSlug(doc)
       const detailPath = `recommendations/${slug}.html`
       const detailHtml = buildStockRecommendationHtml(doc, SITE_TITLE, basePath)
-      const existing = await githubGetFile(repo, detailPath, token)
-      await githubPutFile(repo, detailPath, detailHtml, token, existing?.sha ?? null)
+      const existing = await storage.getFile(detailPath)
+      await storage.putFile(detailPath, detailHtml, existing?.sha ?? null)
       newRecommendations.push(manifestEntry(doc, 'stockRecommendation'))
     } catch (err) {
       console.warn(`Skipping recommendation ${id}: ${err.message}`)
@@ -452,13 +482,13 @@ async function fullRebuild(projectId, dataset, token, repo, basePath) {
     updatedAt: new Date().toISOString()
   }
 
-  const manifestSha = manifestFile ? manifestFile.sha : null
-  await githubPutFile(repo, 'manifest.json', JSON.stringify(manifest, null, 2), token, manifestSha)
-
-  await publishIndexPages(repo, manifest, token, basePath)
+  await storage.putFile('manifest.json', JSON.stringify(manifest, null, 2), manifestFile?.sha ?? null)
+  await publishIndexPages(storage, manifest, basePath)
 
   console.log(
-    `Full rebuild: ${newArticles.length} articles, ${newRecommendations.length} recommendations published to gh-pages`
+    isLocal
+      ? `Local build: ${newArticles.length} articles, ${newRecommendations.length} recommendations → ${OUTPUT_DIR}`
+      : `Full rebuild: ${newArticles.length} articles, ${newRecommendations.length} recommendations published to gh-pages`
   )
 }
 

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %> | <%= siteTitle %></title>
+  <meta name="description" content="<%= excerpt %>">
+  <% if (published) { %><meta name="date" content="<%= published %>"><% } %>
+  <link rel="stylesheet" href="<%= basePath %>/styles.css">
+</head>
+<body>
+  <%- include('partials/header', { basePath, siteTitle }) %>
+  <main class="page-content article-page">
+    <article>
+      <header class="article-header">
+        <h1><%= title %></h1>
+      </header>
+      <div class="content"><%- bodyHtml %></div>
+    </article>
+  </main>
+  <%- include('partials/footer', { basePath, siteTitle }) %>
+</body>
+</html>

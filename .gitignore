@@ -20,3 +20,6 @@ studio-stock-recommendations/.sanity/
 
 # Optional: keep docs and scripts, ignore large or generated assets
 # public/uploads/
+
+# Local site build (npm run build:local)
+dist/
