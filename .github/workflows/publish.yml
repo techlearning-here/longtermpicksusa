@@ -1,0 +1,33 @@
+name: Publish to GitHub Pages
+
+on:
+  repository_dispatch:
+    types: [sanity-publish]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install pipeline dependencies
+        run: npm install
+
+      - name: Publish static page
+        env:
+          SANITY_PROJECT_ID: ${{ secrets.SANITY_PROJECT_ID }}
+          SANITY_DATASET: ${{ secrets.SANITY_DATASET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DOCUMENT_ID: ${{ github.event.client_payload.documentId }}
+          DOCUMENT_TYPE: ${{ github.event.client_payload.type }}
+        run: npm run publish

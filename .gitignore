@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Sanity Studio build / runtime
+studio-stock-recommendations/dist/
+studio-stock-recommendations/.sanity/
+
+# OS / editor
+.DS_Store
+*.log
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Optional: keep docs and scripts, ignore large or generated assets
+# public/uploads/
