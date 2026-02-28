@@ -1,1 +1,14 @@
-{"articles":[],"recommendations":[],"updatedAt":""}
+{
+  "articles": [],
+  "recommendations": [
+    {
+      "id": "91837bc7-d54e-4313-8eea-3ecf006f7ba8",
+      "slug": "aapl",
+      "title": "Apple",
+      "ticker": "AAPL",
+      "excerpt": "",
+      "publishedAt": ""
+    }
+  ],
+  "updatedAt": "2026-02-28T21:12:41.252Z"
+}
