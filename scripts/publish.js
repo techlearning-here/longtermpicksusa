@@ -16,6 +16,7 @@ const ejs = require('ejs')
 
 const BRANCH = 'gh-pages'
 const SITE_TITLE = 'Long Term Picks USA'
+const RECOMMENDATIONS_PAGE_SIZE = 20
 const TEMPLATES_DIR = path.join(__dirname, '..', 'templates')
 const OUTPUT_DIR = process.env.OUTPUT_DIR || null
 
@@ -147,12 +148,91 @@ function buildListingHtml(manifest, type, siteTitle, basePath) {
   const listBase =
     (basePath || '') + (type === 'article' ? '/articles' : '/recommendations')
   const pageTitle = type === 'article' ? 'Articles' : 'Stock Recommendations'
+
+  if (type === 'article') {
+    const byYear = new Map()
+    for (const item of sorted) {
+      const year = item.publishedAt
+        ? new Date(item.publishedAt).getFullYear()
+        : 0
+      if (!byYear.has(year)) byYear.set(year, [])
+      byYear.get(year).push({ slug: item.slug, title: item.title })
+    }
+    const articlesByYear = [...byYear.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([year, itemsInYear]) => ({ year, items: itemsInYear }))
+    return renderTemplate('listing.ejs', {
+      siteTitle,
+      basePath: basePath || '',
+      pageTitle,
+      listBase,
+      listType: 'articles',
+      articlesByYear
+    })
+  }
+
   return renderTemplate('listing.ejs', {
     siteTitle,
     basePath: basePath || '',
     pageTitle,
     listBase,
-    items: sorted.map((item) => ({slug: item.slug, title: item.title}))
+    listType: 'list',
+    items: sorted.map((item) => ({ slug: item.slug, title: item.title }))
+  })
+}
+
+/**
+ * Build recommendation table row data from manifest (same shape as index).
+ */
+function recommendationRows(manifest, basePath) {
+  const raw = (manifest.recommendations || [])
+    .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0))
+  const b = basePath || ''
+  return raw.map((r) => {
+    const recType = (r.recommendationType || '').toLowerCase()
+    const isBuy = recType === 'buy'
+    const badgeClass = isBuy ? 'badge-buy' : recType === 'sell' ? 'badge-sell' : 'badge-neutral'
+    const targetStr =
+      r.targetPrice != null && r.targetPrice !== ''
+        ? `$${Number(r.targetPrice).toLocaleString()}`
+        : '—'
+    return {
+      ticker: r.ticker || '—',
+      title: r.title || '—',
+      recommendationType: r.recommendationType || '—',
+      dateStr: formatRecommendationDate(r.publishedAt),
+      targetStr,
+      timeHorizon: r.timeHorizon || '—',
+      badgeClass,
+      detailUrl: `${b}/recommendations/${r.slug}.html`
+    }
+  })
+}
+
+/**
+ * Build one page of the recommendations listing (table + pagination).
+ */
+function buildRecommendationListingPage(manifest, siteTitle, basePath, pageNum) {
+  const allRows = recommendationRows(manifest, basePath)
+  const totalCount = allRows.length
+  const totalPages = Math.max(1, Math.ceil(totalCount / RECOMMENDATIONS_PAGE_SIZE))
+  const page = Math.min(Math.max(1, pageNum), totalPages)
+  const start = (page - 1) * RECOMMENDATIONS_PAGE_SIZE
+  const recommendations = allRows.slice(start, start + RECOMMENDATIONS_PAGE_SIZE)
+  const listBase = (basePath || '') + '/recommendations'
+  return renderTemplate('listing.ejs', {
+    siteTitle,
+    basePath: basePath || '',
+    pageTitle: 'Stock Recommendations',
+    listBase,
+    listType: 'recommendations',
+    recommendations,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalCount,
+      pageSize: RECOMMENDATIONS_PAGE_SIZE
+    }
   })
 }
 
@@ -393,12 +473,21 @@ async function publishIndexPages(storage, manifest, basePath) {
     articlesIndex?.sha
   )
 
-  const recsIndex = await storage.getFile('recommendations/index.html')
-  await storage.putFile(
-    'recommendations/index.html',
-    buildListingHtml(manifest, 'stockRecommendation', SITE_TITLE, basePath),
-    recsIndex?.sha
+  const allRecRows = recommendationRows(manifest, basePath)
+  const recTotalPages = Math.max(
+    1,
+    Math.ceil(allRecRows.length / RECOMMENDATIONS_PAGE_SIZE)
   )
+  for (let p = 1; p <= recTotalPages; p++) {
+    const recPath =
+      p === 1 ? 'recommendations/index.html' : `recommendations/page/${p}.html`
+    const recExisting = await storage.getFile(recPath)
+    await storage.putFile(
+      recPath,
+      buildRecommendationListingPage(manifest, SITE_TITLE, basePath, p),
+      recExisting?.sha ?? null
+    )
+  }
 
   const indexFile = await storage.getFile('index.html')
   await storage.putFile('index.html', buildIndexHtml(manifest, SITE_TITLE, basePath), indexFile?.sha)

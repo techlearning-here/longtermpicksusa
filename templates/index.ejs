@@ -17,7 +17,7 @@
             <th>Ticker</th>
             <th>Company</th>
             <th>Recommendation</th>
-            <th>Date</th>
+            <th>Rec Date</th>
             <th>Target price</th>
             <th>Time horizon</th>
             <th></th>
@@ -32,7 +32,7 @@
       <td class="col-date"><%= r.dateStr %></td>
       <td class="col-target"><%= r.targetStr %></td>
       <td class="col-horizon"><%= r.timeHorizon %></td>
-      <td class="col-action"><a href="<%= r.detailUrl %>" class="link-view">View</a></td>
+      <td class="col-action"><a href="<%= r.detailUrl %>" class="link-view icon-view" aria-label="View"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>
     </tr>
 <% }); %>
 <% if (recommendations.length === 0) { %>
@@ -41,7 +41,6 @@
         </tbody>
       </table>
     </div>
-    <p class="footer-links"><a href="<%= basePath %>/recommendations/">View all recommendations</a><a href="<%= basePath %>/articles/">Articles</a></p>
   </main>
   <%- include('partials/footer', { basePath, siteTitle }) %>
 </body>

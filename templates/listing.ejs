@@ -11,13 +11,85 @@
   <main class="page-content listing-page">
     <h1 class="listing-title"><%= siteTitle %></h1>
     <h2 class="section-title"><%= pageTitle %></h2>
+    <% if (listType === 'recommendations') { %>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Company</th>
+            <th>Recommendation</th>
+            <th>Rec Date</th>
+            <th>Target price</th>
+            <th>Time horizon</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+<% (recommendations || []).forEach(function(r) { %>
+    <tr>
+      <td class="col-ticker"><a href="<%= r.detailUrl %>" class="link-ticker"><%= r.ticker %></a></td>
+      <td class="col-company"><%= r.title %></td>
+      <td class="col-rec"><span class="badge <%= r.badgeClass %>"><%= r.recommendationType %></span></td>
+      <td class="col-date"><%= r.dateStr %></td>
+      <td class="col-target"><%= r.targetStr %></td>
+      <td class="col-horizon"><%= r.timeHorizon %></td>
+      <td class="col-action"><a href="<%= r.detailUrl %>" class="link-view icon-view" aria-label="View"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>
+    </tr>
+<% }); %>
+<% if (!recommendations || recommendations.length === 0) { %>
+    <tr><td colspan="7" class="empty-state"><%= (pagination && pagination.totalCount === 0) ? 'No recommendations yet.' : 'No recommendations on this page.' %></td></tr>
+<% } %>
+        </tbody>
+      </table>
+    </div>
+    <% if (pagination && pagination.totalPages > 1) { %>
+    <nav class="pagination" aria-label="Recommendations pagination">
+      <ul class="pagination-list">
+        <% if (pagination.currentPage > 1) { %>
+        <li><a href="<%= pagination.currentPage === 2 ? basePath + '/recommendations/' : basePath + '/recommendations/page/' + (pagination.currentPage - 1) + '.html' %>" class="pagination-link" rel="prev">Previous</a></li>
+        <% } %>
+        <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+        <li>
+          <% if (i === pagination.currentPage) { %>
+          <span class="pagination-current" aria-current="page"><%= i %></span>
+          <% } else { %>
+          <a href="<%= i === 1 ? basePath + '/recommendations/' : basePath + '/recommendations/page/' + i + '.html' %>" class="pagination-link"><%= i %></a>
+          <% } %>
+        </li>
+        <% } %>
+        <% if (pagination.currentPage < pagination.totalPages) { %>
+        <li><a href="<%= basePath + '/recommendations/page/' + (pagination.currentPage + 1) + '.html' %>" class="pagination-link" rel="next">Next</a></li>
+        <% } %>
+      </ul>
+      <p class="pagination-info">Page <%= pagination.currentPage %> of <%= pagination.totalPages %> (<%= pagination.totalCount %> recommendations)</p>
+    </nav>
+    <% } %>
+    <% } else if (listType === 'articles') { %>
+    <div class="card">
+      <% (articlesByYear || []).forEach(function(group, idx) { %>
+      <details class="articles-by-year" <%= idx === 0 ? 'open' : '' %>>
+        <summary class="year-heading"><%= group.year %> (<%= (group.items || []).length %>)</summary>
+        <ul class="list-items">
+          <% (group.items || []).forEach(function(item) { %>
+          <li><a href="<%= listBase %>/<%= item.slug %>.html"><%= item.title %></a></li>
+          <% }); %>
+        </ul>
+      </details>
+      <% }); %>
+      <% if (!articlesByYear || articlesByYear.length === 0) { %>
+      <p class="empty-state">No articles yet.</p>
+      <% } %>
+    </div>
+    <% } else { %>
     <div class="card">
       <ul class="list-items">
-<% items.forEach(function(item) { %>
+<% (items || []).forEach(function(item) { %>
         <li><a href="<%= listBase %>/<%= item.slug %>.html"><%= item.title %></a></li>
 <% }); %>
       </ul>
     </div>
+    <% } %>
   </main>
   <%- include('partials/footer', { basePath, siteTitle }) %>
 </body>
