@@ -144,6 +144,10 @@ body {
   width: 100%;
 }
 
+.listing-page.page-content {
+  max-width: 960px;
+}
+
 /* Nav partial when used inside a light card (e.g. article/listing) */
 nav.site-nav {
   background: var(--card);
@@ -214,6 +218,11 @@ tbody tr:hover {
 
 .col-ticker {
   font-weight: 600;
+}
+
+.col-date {
+  white-space: nowrap;
+  min-width: 7rem;
 }
 
 .link-ticker {
