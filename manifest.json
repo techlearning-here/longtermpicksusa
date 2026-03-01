@@ -13,6 +13,13 @@
       "title": "article2",
       "excerpt": "dsdd",
       "publishedAt": "2026-03-01T02:39:05.956Z"
+    },
+    {
+      "id": "602abcad-48a1-41bf-924a-b4872d3da3ae",
+      "slug": "article-3",
+      "title": "article 3",
+      "excerpt": "dds",
+      "publishedAt": "2026-03-01T02:43:53.355Z"
     }
   ],
   "recommendations": [
@@ -39,5 +46,5 @@
       "publishedAt": "2026-02-28T23:35:00.000Z"
     }
   ],
-  "updatedAt": "2026-03-01T02:39:37.558Z"
+  "updatedAt": "2026-03-01T02:44:25.005Z"
 }
